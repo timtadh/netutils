@@ -1,4 +1,4 @@
-package netgrid
+package netutils
 
 /* Author: Tim Henderson
  * Email: tadh@case.edu
