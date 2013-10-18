@@ -4,7 +4,7 @@ netutils
 By Tim Henderson (tim.tadh@gmail.com)
 
 This is a little library that was part of a larger project that I decided to
-pull out and make public. It is kinda a replacement for `chan" in the sense
+pull out and make public. It is kinda a replacement for `netchan` in the sense
 that it allows you to treat a TCP connection as a pair of `chan`s. However,
 it is not as ambitious as `netchan` was. It doesn't attempt to solve any sort of
 serialization for you instead it is a `[]byte` oriented interface.
