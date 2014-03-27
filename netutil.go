@@ -76,29 +76,37 @@ func IsEOF(err error) bool {
 A TCPWriter takes a tcp connection and transforms it into a writable []byte
 channel. You can use this to build more "goish" tcp servers.
 */
-func TCPWriter(con *net.TCPConn) (send chan<- []byte) {
-    comm := make(chan []byte)
-    go func(recv <-chan []byte) {
-        for block := range recv {
+func TCPWriter(con *net.TCPConn, errors chan<- error) (send chan<- []byte) {
+    return Writer(con, errors)
+}
+
+func Writer(writer io.WriteCloser, errors chan<- error) (chan<- []byte) {
+    reader := make(chan []byte)
+    go func() {
+        defer func() {
+            err := writer.Close()
+            if err != nil {
+                errors<-err
+            }
+        }()
+        for block := range reader {
             if DEBUG {
                 log.Println("TCPWriter got a block", string(block))
             }
-            for n, err := con.Write(block);
-                n < len(block) || err != nil;
-                n, err = con.Write(block[n:]) {
-                  if err != nil {
-                      log.Panic(err)
-                  }
+            n, err := writer.Write(block)
+            for n < len(block) || err != nil {
+                if err != nil {
+                   errors<-err
+                   break
+                }
+                n, err = writer.Write(block[n:])
             }
             if DEBUG {
                 log.Println("TCPWriter sent the block", string(block))
             }
         }
-        if err := con.Close(); err != nil {
-            log.Println(err)
-        }
-    }(comm)
-    return comm
+    }()
+    return reader
 }
 
 /*
@@ -107,28 +115,32 @@ channel. It doesn't read []byte since it doesn't know what delimiters you want
 to use. If you want to consume the byte channel as a series of lines try
 "Readlines" if you have another delimiter ('\0' or similar) try ReadDelims.
 */
-func TCPReader(con *net.TCPConn) (recv <-chan byte) {
-    comm := make(chan byte)
-    go func(send chan<- byte) {
+func TCPReader(con *net.TCPConn, errors chan<- error) (recv <-chan byte) {
+    return Reader(con, errors)
+}
+
+func Reader(reader io.Reader, errors chan<- error) (<-chan byte) {
+    writer := make(chan byte)
+    go func() {
+        defer close(writer)
         memblock := make([]byte, 256)
         var EOF bool
         for !EOF {
-            n, err := con.Read(memblock)
+            n, err := reader.Read(memblock)
             if IsEOF(err) {
                 EOF = true
             } else if err != nil {
-                log.Panic(err)
+                errors<-err
             }
             if DEBUG && n > 0 {
-                log.Println("TCPReader got block", string(memblock[:n]))
+                log.Println("Reader got block", string(memblock[:n]))
             }
             for i := 0; i < n; i++ {
-                send<-memblock[i]
+                writer<-memblock[i]
             }
         }
-        close(send)
-    }(comm)
-    return comm
+    }()
+    return writer
 }
 
 /*
