@@ -39,7 +39,7 @@ Docs
 ```
 PACKAGE DOCUMENTATION
 
-package netgrid
+package netutils
     import "github.com/timtadh/netutils"
 
 
@@ -71,6 +71,8 @@ func ReadDelims(recv <-chan byte, delim byte) (linechan <-chan []byte)
     slice which does not include the deliminter. The sending channel will be
     closed when the recieving channel is closed.
 
+func Reader(reader io.Reader, errors chan<- error) <-chan byte
+
 func Readline(recv <-chan byte) (line []byte, EOF bool)
     A block read operation which reads one line from the byte channel. It
     used ReadDelim(recv, '\n') under the hood.
@@ -80,15 +82,17 @@ func Readlines(recv <-chan byte) (linechan <-chan []byte)
     from the recieving channel. See the ReadDelims documentation for caveats
     on usage (as it uses ReadDelims under the hood).
 
-func TCPReader(con *net.TCPConn) (recv <-chan byte)
+func TCPReader(con *net.TCPConn, errors chan<- error) (recv <-chan byte)
     A TCPReader takes a tcp connection and transforms it into a readable
     byte channel. It doesn't read []byte since it doesn't know what
     delimiters you want to use. If you want to consume the byte channel as a
     series of lines try "Readlines" if you have another delimiter ('\0' or
     similar) try ReadDelims.
 
-func TCPWriter(con *net.TCPConn) (send chan<- []byte)
+func TCPWriter(con *net.TCPConn, errors chan<- error) (send chan<- []byte)
     A TCPWriter takes a tcp connection and transforms it into a writable
     []byte channel. You can use this to build more "goish" tcp servers.
-```
 
+func Writer(writer io.WriteCloser, errors chan<- error) chan<- []byte
+
+```
